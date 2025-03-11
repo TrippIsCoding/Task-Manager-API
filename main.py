@@ -1,40 +1,23 @@
-import sqlite3 as db
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 
-def get_db():
-    conn = db.connect('task_manager.db')
-    try:
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
+DATABASE_URL = 'sqlite:///task_manager.db'
+engine = create_engine(DATABASE_URL, connect_args={'check_same_thread': False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-def create_table():
-    with db.connect('task_manager.db') as conn:
-        conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
-                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     title TEXT NOT NULL,
-                     description TEXT,
-                     status TEXT,
-                     priority INTEGER,
-                     deadline TEXT
-                     )''')
+class TaskModel(Base):
+    __tablename__ = 'tasks'
 
-def row_to_dict(row):
-    '''converts a database row (tuple) to a dictionary matching the Task model.'''
-    return {
-        'id': row[0],
-        'title': row[1],
-        'description': row[2],
-        'status': row[3],
-        'priority': row[4],
-        'deadline': row[5] 
-    } if row else None
-
-app = FastAPI()
-
-create_table()
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(String)
+    status = Column(String)
+    priority = Column(Integer)
+    deadline = Column(String)
 
 class Task(BaseModel):
     title: str
@@ -43,86 +26,82 @@ class Task(BaseModel):
     priority: int
     deadline: str
 
+    class Config:
+        orm_mode = True
+
+app = FastAPI()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+Base.metadata.create_all(bind=engine)
+
 @app.get('/tasks')
-def list_all_tasks(order: str = 'asc', conn: db.Connection = Depends(get_db)):
-    '''This probably lists all the tasks in the database who knows really'''
-
-    cursor = conn.cursor()
-
+def list_all_tasks(order: str = 'asc', db: Session = Depends(get_db)):
     if order.lower() == 'asc':
-        cursor.execute('SELECT * FROM tasks ORDER BY priority ASC')
+        tasks = db.query(TaskModel).order_by(TaskModel.priority.asc()).all()
     else:
-        cursor.execute('SELECT * FROM tasks ORDER BY priority DESC')
-    
-    tasks = cursor.fetchall()
+        tasks = db.query(TaskModel).order_by(TaskModel.priority.desc()).all()
 
     if not tasks:
-        return {'message': 'could not find any tasks in the database'}
-
-    return {'tasks': [row_to_dict(row) for row in tasks]}
+        raise HTTPException(status_code=404, detail='No tasks found')
+    
+    return {'tasks': tasks}
 
 @app.get('/tasks/{id}')
-def show_specific_task(id: int, conn: db.Connection = Depends(get_db)):
-    '''This is used to find a specific task in the database by its id or is it'''
-    try:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM tasks WHERE id = ?', (id,))
-        task = cursor.fetchone()
-    except (db.IntegrityError, db.OperationalError, db.DatabaseError) as e:
-        return {'Error': str(e)}
-
+def show_specific_task(id: int, db: Session = Depends(get_db)):
+    task = db.query(TaskModel).filter(TaskModel.id == id).first()
+    
     if not task:
-        raise HTTPException(status_code=404, detail='Task not found')
-
-    return {'task': row_to_dict(task)}
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {"task": task}
 
 @app.post('/tasks')
-def create_task(task: Task, conn: db.Connection = Depends(get_db)):
-    '''This is so the user can create tasks cause whats the point of a task manager with no tasks am i right'''
-    
-    try:
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO tasks (title, description, status, priority, deadline) VALUES (?, ?, ?, ?, ?)',
-                        (task.title, task.description, task.status, task.priority, task.deadline))
-            
-        return {'message': 'Task created successfully',
-                'task_id': cursor.lastrowid
-               }
+def create_task(task: Task, db: Session = Depends(get_db)):
+    db_task = TaskModel(
+        title=task.title,
+        description=task.description,
+        status=task.status,
+        priority=task.priority,
+        deadline=task.deadline,
+    )
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
 
-    except (db.IntegrityError, db.OperationalError, db.DatabaseError) as e:
-        return {'Error': str(e)}
+    return {"message": "Task created successfully", "task_id": db_task.id}
 
 @app.put('/tasks/{id}')
-def update_task(id: int, task: Task, conn: db.Connection = Depends(get_db)):
-    '''This is used to update an already created tasks, its some neet stuff'''
+def update_task(id: int, task: Task, db: Session = Depends(get_db)):
+    db_task = db.query(TaskModel).filter(TaskModel.id == id).first()
 
-    try:
-        cursor = conn.cursor()
+    if not db_task:
+        raise HTTPException(status_code=404, detail='Task not found')
+    
+    db_task.title = task.title
+    db_task.description = task.description
+    db_task.status = task.status
+    db_task.priority = task.priority
+    db_task.deadline = task.deadline
 
-        if not cursor.execute('SELECT * FROM tasks WHERE id = ?', (id,)).fetchone():
-            raise HTTPException(status_code=404, detail='Task not found')
-
-        cursor.execute('UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, deadline = ? WHERE id = ?',
-                        (task.title, task.description, task.status, task.priority, task.deadline, id))
-    except (db.IntegrityError, db.OperationalError, db.DatabaseError) as e:
-        return {'Error': str(e)}
+    db.commit()
+    db.refresh(db_task)
 
     return {'message': 'Task updated successfully'}
 
 @app.delete('/tasks/{id}')
-def delete_task(id: int, conn: db.Connection = Depends(get_db)):
-    '''This is used to delete a specific task literally the name of the function'''
+def delete_task(id: int, db: Session = Depends(get_db)):
+    db_task = db.query(TaskModel).filter(TaskModel.id == id).first()
 
-    try:
-        cursor = conn.cursor()
+    if not db_task:
+        raise HTTPException(status_code=404, datail='Task not found')
 
-        cursor.execute("SELECT * FROM tasks WHERE id = ?", (id,))
-        task = cursor.fetchone()
-        if not task:
-            raise HTTPException(status_code=404, detail='Task not found')
+    db.delete(db_task)
+    db.commit()
 
-        cursor.execute('DELETE FROM tasks WHERE id = ?', (id,))
-    except (db.IntegrityError, db.OperationalError, db.DatabaseError) as e:
-        return {'Error': str(e)}
-    
     return {'message': 'Task deleted successfully'}
