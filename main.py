@@ -1,47 +1,51 @@
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+import jwt
+from typing import Annotated
+from sqlalchemy.orm import Session
+from .models import Task, TaskModel, TokenResponse, User
+from datetime import timedelta, timezone, datetime
+from .config import SECRET_KEY, ALGORITHM
+from .database import get_db, Base, engine
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
-
-DATABASE_URL = 'sqlite:///task_manager.db'
-engine = create_engine(DATABASE_URL, connect_args={'check_same_thread': False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-class TaskModel(Base):
-    __tablename__ = 'tasks'
-
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
-    description = Column(String)
-    status = Column(String)
-    priority = Column(Integer)
-    deadline = Column(String)
-
-class Task(BaseModel):
-    title: str
-    description: str
-    status: str
-    priority: int
-    deadline: str
-
-    class Config:
-        orm_mode = True
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 app = FastAPI()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 Base.metadata.create_all(bind=engine)
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/token')
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (expires_delta if expires_delta else timedelta(minutes=30))
+    to_encode.update({'exp': expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def decode_access_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+    
+def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail='Invalid token')
+    
+    return User(username=payload['sub'])
+
+@app.post('/token', response_model=TokenResponse)
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    if form_data.username != 'testuser' or form_data.password != 'testpassword':
+        raise HTTPException(status_code=400, detail='Invalid credentials')
+    
+    access_token = create_access_token({'sub': form_data.username})
+    return {'access_token': access_token, 'token_type': 'bearer'}
+
 @app.get('/tasks')
-def list_all_tasks(order: str = 'asc', db: Session = Depends(get_db)):
+def list_all_tasks(order: str = 'asc', db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     if order.lower() == 'asc':
         tasks = db.query(TaskModel).order_by(TaskModel.priority.asc()).all()
     else:
@@ -61,7 +65,7 @@ def show_specific_task(id: int, db: Session = Depends(get_db)):
     
     return {"task": task}
 
-@app.post('/tasks')
+@app.post('/create/tasks')
 def create_task(task: Task, db: Session = Depends(get_db)):
     db_task = TaskModel(
         title=task.title,

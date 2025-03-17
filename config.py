@@ -1,0 +1,2 @@
+SECRET_KEY = 'key'
+ALGORITHM = 'HS256'
