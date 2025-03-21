@@ -65,7 +65,7 @@ def delete_task(id: int, token: str = Depends(oauth2_scheme), db: Session = Depe
     task = db.query(TaskModel).filter(TaskModel.task_id == id).first()
 
     if not task:
-        raise HTTPException(status_code=404, datail='Task not found')
+        raise HTTPException(status_code=404, detail='Task not found')
     if user_info['user_id'] != task.user_id:
         raise HTTPException(status_code=401, detail='User does not own this task')
     
