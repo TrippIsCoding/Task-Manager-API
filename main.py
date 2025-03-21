@@ -1,8 +1,6 @@
-from sqlalchemy.orm import Session
-from fastapi import FastAPI, HTTPException, Depends
-from auth import auth_router, oauth2_scheme
-from models import Task, TaskModel
-from database import get_db, Base, engine
+from fastapi import FastAPI
+from auth import auth_router
+from database import Base, engine
 from task_crud import task_router
 
 app = FastAPI()
