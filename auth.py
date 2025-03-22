@@ -4,6 +4,7 @@ from passlib.context import CryptContext
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from models import User, UserModel 
 from database import get_db
 from config import SECRET_KEY, ALGORITHM
@@ -26,7 +27,7 @@ def verify_token(token: str):
 
 auth_router = APIRouter()
 
-@auth_router.post('/SignUp')
+@auth_router.post('/user/signup')
 async def create_account(user: User, db: Session = Depends(get_db)):
     new_user = UserModel(
         username=user.username,
@@ -34,9 +35,12 @@ async def create_account(user: User, db: Session = Depends(get_db)):
         email=user.email,
         full_name=user.full_name
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail='Username or email already in use')
 
     return {'user': new_user}
 
