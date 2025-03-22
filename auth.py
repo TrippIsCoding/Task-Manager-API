@@ -21,8 +21,8 @@ def verify_token(token: str):
     try:
         user = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
         return user
-    except JWTError as e:
-        raise HTTPException(status_code=401, detail='Unauthorized')
+    except JWTError:
+        raise HTTPException(status_code=401, detail='User is unauthorized')
 
 auth_router = APIRouter()
 
