@@ -1,6 +1,6 @@
 from database import Base
 from typing import Annotated
-from pydantic import BaseModel, Field, conint, condate
+from pydantic import BaseModel, Field
 from datetime import date
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
@@ -43,7 +43,7 @@ class Task(BaseModel):
     title: str
     description: str
     status: str
-    priority: Annotated[int, Field(conint(strict=True, ge=1, le=5))]
+    priority: Annotated[int, Field(ge=1, le=5)]
     deadline: date
 
     class Config:
