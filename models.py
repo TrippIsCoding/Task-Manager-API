@@ -17,10 +17,10 @@ class UserModel(Base):
     task = relationship('TaskModel', back_populates='user', cascade='all, delete-orphan')
 
 class User(BaseModel):
-    username: str
-    password: str
-    email: str | None = None
-    full_name: str | None = None
+    username: Annotated[str, Field(min_length=3, max_length=20)]
+    password: Annotated[str, Field(min_length=8, max_length=72)]
+    email: Annotated[str, Field(max_length=100)]
+    full_name: Annotated[str, Field(max_length=100)] | None = None
 
     class Config:
         from_attributes = True
@@ -40,11 +40,11 @@ class TaskModel(Base):
     user = relationship('UserModel', back_populates='task')
 
 class Task(BaseModel):
-    title: str
+    title: Annotated[str, Field(max_length=60)]
     description: Annotated[str, Field(max_length=300)]
     status: Literal['Ongoing', 'Completed']
     priority: Annotated[int, Field(ge=1, le=5)]
-    deadline: date
+    deadline: Annotated[date, Field(ge=date.today())]
 
     class Config:
         from_attributes = True

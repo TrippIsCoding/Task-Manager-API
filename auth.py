@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from email_validator import validate_email, EmailNotValidError
 from models import User, UserModel 
 from database import get_db
 from config import SECRET_KEY, ALGORITHM
@@ -29,12 +30,18 @@ auth_router = APIRouter()
 
 @auth_router.post('/user/signup')
 async def create_account(user: User, db: Session = Depends(get_db)):
+    try:
+        validate_email(user.email)
+    except EmailNotValidError: 
+        raise HTTPException(status_code=422, detail='Invalid email address')
+
     new_user = UserModel(
         username=user.username,
         password=hash_password(user.password),
         email=user.email,
         full_name=user.full_name
     )
+
     try:
         db.add(new_user)
         db.commit()
