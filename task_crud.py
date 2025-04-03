@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from models import Task, TaskModel, UserModel
 from database import get_db
@@ -22,7 +23,6 @@ def list_all_tasks(token: str = Depends(oauth2_scheme), db: Session = Depends(ge
 @task_router.post('/create')
 def create_task(task: Task, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     user_info = verify_token(token)
-
     new_task = TaskModel(
         user_id=user_info['user_id'],
         title=task.title,

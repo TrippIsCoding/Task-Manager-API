@@ -1,5 +1,5 @@
 from database import Base
-from typing import Annotated
+from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 from datetime import date
 from sqlalchemy import Column, Integer, String, ForeignKey
@@ -41,8 +41,8 @@ class TaskModel(Base):
 
 class Task(BaseModel):
     title: str
-    description: str
-    status: str
+    description: Annotated[str, Field(max_length=300)]
+    status: Literal['Ongoing', 'Completed']
     priority: Annotated[int, Field(ge=1, le=5)]
     deadline: date
 
