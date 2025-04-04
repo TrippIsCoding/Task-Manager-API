@@ -2,7 +2,7 @@
 Backend API for managing user tasks, built with FastAPI, JWT auth, and SQLAlchemy (SQLite).
 
 ## Features
-- User signup/login with JWT (30-min tokens, `user_id` in payload)
+- User signup/login with JWT (30-min tokens)
 - Create, read, update, delete tasks (title, description, status, priority, deadline)
 - Task ownership enforced via `user_id` checks
 - SQLite DB with user-task relationships
