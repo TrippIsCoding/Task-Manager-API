@@ -9,10 +9,10 @@ class UserModel(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String, index=True, nullable=False, unique=True)
+    username = Column(String, index=True, unique=True)
     password = Column(String)
-    email = Column(String, index=True, nullable=False, unique=True)
-    full_name = Column(String)
+    email = Column(String, index=True, unique=True)
+    full_name = Column(String, nullable=True)
 
     task = relationship('TaskModel', back_populates='user', cascade='all, delete-orphan')
 
