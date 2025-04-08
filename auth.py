@@ -86,7 +86,7 @@ async def user_authenticate(user: OAuth2PasswordRequestForm = Depends(), db: Ses
     return {'token': token}
 
 @auth_router.get('/user/ViewAll')
-async def list_all_users(key: str = Depends(), db: Session = Depends(get_db)):
+async def list_all_users(key: str, db: Session = Depends(get_db)):
     '''
     list_all_users list all users in the database so i the owner can check the users database
     '''
