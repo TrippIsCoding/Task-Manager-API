@@ -8,6 +8,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def get_db():
+    '''
+    get_db is for dependancy injection so i can access the database easily
+    '''
     db = SessionLocal()
     try:
         yield db

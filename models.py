@@ -2,10 +2,13 @@ from database import Base
 from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 from datetime import date
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 
 class UserModel(Base):
+    '''
+    the UserModel class is inheriting from database.py Base class to create database tables for users
+    '''
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -17,6 +20,9 @@ class UserModel(Base):
     task = relationship('TaskModel', back_populates='user', cascade='all, delete-orphan')
 
 class User(BaseModel):
+    '''
+    the User class is inheriting from pydantic BaseModel for validation
+    '''
     username: Annotated[str, Field(min_length=3, max_length=20)]
     password: Annotated[str, Field(min_length=8, max_length=72)]
     email: Annotated[str, Field(max_length=100)]
@@ -27,6 +33,9 @@ class User(BaseModel):
 
 
 class TaskModel(Base):
+    '''
+    the TaskModel class is inheriting from database.py Base class to create database tables for tasks
+    '''
     __tablename__ = 'tasks'
 
     task_id = Column(Integer, primary_key=True, index=True)
@@ -35,11 +44,14 @@ class TaskModel(Base):
     description = Column(String)
     status = Column(String)
     priority = Column(Integer)
-    deadline = Column(String)
+    deadline = Column(Date)
 
     user = relationship('UserModel', back_populates='task')
 
 class Task(BaseModel):
+    '''
+    the Task class is inheriting from pydantic BaseModel for validation
+    '''
     title: Annotated[str, Field(max_length=60)]
     description: Annotated[str, Field(max_length=300)]
     status: Literal['Ongoing', 'Completed']

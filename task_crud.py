@@ -9,6 +9,9 @@ task_router = APIRouter()
 
 @task_router.get('')
 def list_all_tasks(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    '''
+    list_all_tasks will return all the tasks associated with the users id
+    '''
     user_info = verify_token(token)
 
     user = db.query(UserModel).filter_by(username=user_info['sub']).first()
@@ -22,6 +25,10 @@ def list_all_tasks(token: str = Depends(oauth2_scheme), db: Session = Depends(ge
 
 @task_router.post('/create')
 def create_task(task: Task, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    '''
+    create_task allows the user to create a new task and add it to the database
+    it also return the users username and the newly created task id
+    '''
     user_info = verify_token(token)
     new_task = TaskModel(
         user_id=user_info['user_id'],
@@ -40,6 +47,10 @@ def create_task(task: Task, token: str = Depends(oauth2_scheme), db: Session = D
 
 @task_router.put('/update/{id}')
 def update_task(id: int, new_task: Task, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    '''
+    update_task will allow users to update a specific task associated to there account
+    it also return the tasks id
+    '''
     user_info = verify_token(token)
     task = db.query(TaskModel).filter(TaskModel.task_id==id).first()
 
@@ -61,6 +72,9 @@ def update_task(id: int, new_task: Task, token: str = Depends(oauth2_scheme), db
 
 @task_router.delete('/delete/{id}')
 def delete_task(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    '''
+    delete_task allows the user to delete a task they own from the database
+    '''
     user_info = verify_token(token)
     task = db.query(TaskModel).filter(TaskModel.task_id == id).first()
 

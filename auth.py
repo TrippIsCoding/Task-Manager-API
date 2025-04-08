@@ -8,28 +8,45 @@ from sqlalchemy.exc import IntegrityError
 from email_validator import validate_email, EmailNotValidError
 from models import User, UserModel 
 from database import get_db
-from config import SECRET_KEY, ALGORITHM
+from config import SECRET_KEY, ALGORITHM, ADMIN_KEY
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/user/login')
 
 def hash_password(password: str):
+    '''
+    hash_password returns the hashed version of a password
+    '''
+
     return pwd_context.hash(password)
 
 def verify_password(password: str, hashed_password: str):
+    '''
+    verify_password verifies the users password matches the hashed password
+    '''
+
     return pwd_context.verify(password, hashed_password)
 
 def verify_token(token: str):
+    '''
+    verify_token verifies the users jwt if its not a valid jwt it raises a 401 status code 
+    this function also return the decoded jwt so i can get user info like user id and username from it
+    '''
+
     try:
         user = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
         return user
     except JWTError:
         raise HTTPException(status_code=401, detail='User is unauthorized')
 
+# below is the code for the auth endpoints
 auth_router = APIRouter()
 
 @auth_router.post('/user/signup')
 async def create_account(user: User, db: Session = Depends(get_db)):
+    '''
+    create_account allows users to sign up storing thier username, password, email, and full name in the database fpr future login
+    '''
     try:
         validate_email(user.email)
     except EmailNotValidError: 
@@ -53,6 +70,10 @@ async def create_account(user: User, db: Session = Depends(get_db)):
 
 @auth_router.post('/user/login')
 async def user_authenticate(user: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    '''
+    user_authenticate returns a jwt if the user info is valid
+    '''
+
     user_info = db.query(UserModel).filter(UserModel.username==user.username).first()
     if not user_info:
         raise HTTPException(status_code=404, detail='User not found in database')
@@ -65,7 +86,12 @@ async def user_authenticate(user: OAuth2PasswordRequestForm = Depends(), db: Ses
     return {'token': token}
 
 @auth_router.get('/user/ViewAll')
-async def list_all_users(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    verify_token(token)
+async def list_all_users(key: str = Depends(), db: Session = Depends(get_db)):
+    '''
+    list_all_users list all users in the database so i the owner can check the users database
+    '''
+    if key != ADMIN_KEY:
+        raise HTTPException(status_code=401, detail='you do not have access to this endpoint')
+
     users = db.query(UserModel).all()
     return users
