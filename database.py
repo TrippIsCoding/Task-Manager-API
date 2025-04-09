@@ -1,10 +1,8 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from config import postgresql_password
+from config import DATABASE_URL
 
-DATABASE_URL = 'sqlite:///task_manager.db'
-# DATABASE_URL = f'postgresql://postgres:{postgresql_password}@localhost:5432/taskdb'
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
