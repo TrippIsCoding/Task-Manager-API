@@ -15,6 +15,7 @@ Backend API for managing user tasks, built with FastAPI, JWT auth, and SQLAlchem
 1. Clone the repository
 2. Install dependencies: `pip install -r requirements.txt`
 3. Set up environment variables in a `.env` file:
+
 SECRET_KEY=your-secret-key
 
 ALGORITHM=your-algorithm
