@@ -25,6 +25,7 @@ ADMIN_KEY=your-admin-key
 DATABASE_URL=postgresql://user:password@localhost:5432/task_manager
 
 *Note:* Replace `user`, `password`, and database name with your local PostgreSQL credentials.
+
 4. Run the application: `uvicorn main:app --reload`
 
 ## API Endpoints
