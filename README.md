@@ -9,6 +9,7 @@ Backend API for managing user tasks, built with FastAPI, JWT auth, and SQLAlchem
 
 ## Deployment
 - Hosted on Render: [https://task-manager-api-5wzd.onrender.com](https://task-manager-api-5wzd.onrender.com)
+- View interactive docs at [https://task-manager-api-5wzd.onrender.com/docs](https://task-manager-api-5wzd.onrender.com/docs)
 - API is publicly accessible with endpoints under `/auth` and `/task` prefixes
 
 ## Run Locally
