@@ -5,10 +5,21 @@ from models import Task, TaskModel, UserModel
 from database import get_db
 from auth import verify_token, oauth2_scheme
 
+def check_for_task(id: int, token: str, db: Session):
+    user_info = verify_token(token)
+    task = db.query(TaskModel).filter(TaskModel.task_id == id).first()
+
+    if not task:
+        raise HTTPException(status_code=404, detail='Task not found')
+    if user_info['user_id'] != task.user_id:
+        raise HTTPException(status_code=401, detail='User does not own this task')
+    
+    return task
+
 task_router = APIRouter()
 
-@task_router.get('')
-def list_all_tasks(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+@task_router.get('/list')
+async def list_all_tasks(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     '''
     list_all_tasks will return all the tasks associated with the users id
     '''
@@ -24,10 +35,10 @@ def list_all_tasks(token: str = Depends(oauth2_scheme), db: Session = Depends(ge
     return [{'Owner': user_info['sub'], 'task': task} for task in user.task]
 
 @task_router.post('/create')
-def create_task(task: Task, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def create_task(task: Task, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     '''
     create_task allows the user to create a new task and add it to the database
-    it also return the users username and the newly created task id
+    it also returns the users username and the newly created task id
     '''
     user_info = verify_token(token)
     new_task = TaskModel(
@@ -46,18 +57,12 @@ def create_task(task: Task, token: str = Depends(oauth2_scheme), db: Session = D
     return {"message": f"Task created successfully for {user_info['sub']}", "task_id": new_task.task_id}
 
 @task_router.put('/update/{id}')
-def update_task(id: int, new_task: Task, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def update_task(id: int, new_task: Task, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     '''
     update_task will allow users to update a specific task associated to there account
-    it also return the tasks id
+    it also returns the tasks id
     '''
-    user_info = verify_token(token)
-    task = db.query(TaskModel).filter(TaskModel.task_id==id).first()
-
-    if not task:
-        raise HTTPException(status_code=404, detail='Task not found in database')
-    if user_info['user_id'] != task.user_id:
-        raise HTTPException(status_code=401, detail='User does not own task')
+    task = check_for_task(id, token, db)
 
     task.title = new_task.title
     task.description = new_task.description
@@ -71,18 +76,13 @@ def update_task(id: int, new_task: Task, token: str = Depends(oauth2_scheme), db
     return {'message': 'Task updated successfully', 'Task_id': task.task_id}
 
 @task_router.delete('/delete/{id}')
-def delete_task(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def delete_task(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     '''
     delete_task allows the user to delete a task they own from the database
     '''
-    user_info = verify_token(token)
-    task = db.query(TaskModel).filter(TaskModel.task_id == id).first()
 
-    if not task:
-        raise HTTPException(status_code=404, detail='Task not found')
-    if user_info['user_id'] != task.user_id:
-        raise HTTPException(status_code=401, detail='User does not own this task')
-    
+    task = check_for_task(id, token, db)
+
     db.delete(task)
     db.commit()
 
