@@ -37,7 +37,7 @@ auth_router = APIRouter()
 @auth_router.post('/user/signup')
 async def create_account(user: User, db: Session = Depends(get_db)):
     '''
-    create_account allows users to sign up storing thier username, password, email, and full name in the database fpr future login
+    create_account allows users to sign up storing thier username, password, email, and full name in the database for future login
     '''
     try:
         validate_email(user.email)
