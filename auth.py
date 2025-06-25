@@ -80,7 +80,7 @@ async def user_authenticate(user: OAuth2PasswordRequestForm = Depends(), db: Ses
 @auth_router.get('/user/ViewAll')
 async def list_all_users(key: str, db: Session = Depends(get_db)):
     '''
-    list_all_users list all users in the database so i the owner can check the users database
+    list_all_users lists all users in the database. I'm using this so I can make sure everything is working correctly.
     '''
     if key != ADMIN_KEY:
         raise HTTPException(status_code=401, detail='you do not have access to this endpoint')
